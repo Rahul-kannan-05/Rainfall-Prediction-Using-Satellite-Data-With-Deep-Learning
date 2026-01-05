@@ -51,12 +51,25 @@ export const IndiaMap = ({ onLocationSelect }: IndiaMapProps) => {
             cursor: pointer;
           `;
 
-          const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(`
-            <div style="padding: 8px;">
-              <h3 style="font-weight: 600; margin-bottom: 4px;">${state.name}</h3>
-              <p style="font-size: 12px; color: #666;">Avg Rainfall: ${state.avgRainfall} mm</p>
-            </div>
-          `);
+          // Create popup content using DOM methods (safe from XSS)
+          const popupContent = document.createElement('div');
+          popupContent.style.padding = '8px';
+
+          const title = document.createElement('h3');
+          title.style.fontWeight = '600';
+          title.style.marginBottom = '4px';
+          title.textContent = state.name; // textContent auto-escapes
+
+          const rainfall = document.createElement('p');
+          rainfall.style.fontSize = '12px';
+          rainfall.style.color = '#666';
+          rainfall.textContent = `Avg Rainfall: ${state.avgRainfall} mm`;
+
+          popupContent.appendChild(title);
+          popupContent.appendChild(rainfall);
+
+          const popup = new mapboxgl.Popup({ offset: 25 })
+            .setDOMContent(popupContent);
 
           new mapboxgl.Marker(el)
             .setLngLat(state.coordinates)
