@@ -1,0 +1,4 @@
+project_id = "rejfivbaqujmfbiqexyz"
+
+[functions.rainfall-predict]
+verify_jwt = false
