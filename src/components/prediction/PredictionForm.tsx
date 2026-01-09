@@ -5,8 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { SatelliteInput } from '@/types/rainfall';
-import { Cloud, Loader2, MapPin, Thermometer, Sun, Droplets } from 'lucide-react';
-
+import { Cloud, Loader2, MapPin, Thermometer, Sun, Droplets, LocateFixed } from 'lucide-react';
+import { toast } from 'sonner';
 interface PredictionFormProps {
   onSubmit: (input: SatelliteInput) => Promise<void>;
   isLoading: boolean;
@@ -21,12 +21,56 @@ export const PredictionForm = ({ onSubmit, isLoading }: PredictionFormProps) => 
     waterVaporIndex: 0.65,
     date: new Date().toISOString().split('T')[0],
   });
+  const [isLocating, setIsLocating] = useState(false);
+
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser');
+      return;
+    }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        
+        // Check if coordinates are within India's bounds
+        if (latitude >= 6 && latitude <= 38 && longitude >= 68 && longitude <= 98) {
+          setFormData(prev => ({
+            ...prev,
+            latitude: parseFloat(latitude.toFixed(4)),
+            longitude: parseFloat(longitude.toFixed(4)),
+          }));
+          toast.success('Location detected successfully!');
+        } else {
+          toast.warning('Your location is outside India. Using default coordinates.');
+        }
+        setIsLocating(false);
+      },
+      (error) => {
+        setIsLocating(false);
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            toast.error('Location permission denied. Please enable location access.');
+            break;
+          case error.POSITION_UNAVAILABLE:
+            toast.error('Location information unavailable.');
+            break;
+          case error.TIMEOUT:
+            toast.error('Location request timed out.');
+            break;
+          default:
+            toast.error('Failed to get location.');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await onSubmit(formData);
   };
-
   const updateField = <K extends keyof SatelliteInput>(field: K, value: SatelliteInput[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -46,9 +90,30 @@ export const PredictionForm = ({ onSubmit, isLoading }: PredictionFormProps) => 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Location */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <MapPin className="h-4 w-4 text-primary" />
-              Location Coordinates
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <MapPin className="h-4 w-4 text-primary" />
+                Location Coordinates
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleGetLocation}
+                disabled={isLocating}
+              >
+                {isLocating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Detecting...
+                  </>
+                ) : (
+                  <>
+                    <LocateFixed className="mr-2 h-4 w-4" />
+                    Use My Location
+                  </>
+                )}
+              </Button>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
